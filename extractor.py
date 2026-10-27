@@ -55,6 +55,8 @@ def normalize_phone(raw: str) -> str | None:
     digits = re.sub(r"\D", "", raw)
     if not (MIN_DIGITS <= len(digits) <= MAX_DIGITS):
         return None
+    if len(set(digits)) == 1:  # 0000000-style OCR noise
+        return None
     return ("+" if plus else "") + digits
 
 
@@ -135,10 +137,87 @@ def _contacts_from_row(cells: list[str]) -> list[dict]:
     return [{"name": name, "phone": p} for p in phones]
 
 
-def _ocr_image(img) -> str:
+# Characters Tesseract commonly misreads inside numbers
+_OCR_DIGIT_FIXES = str.maketrans({
+    "O": "0", "o": "0", "D": "0",
+    "l": "1", "I": "1", "|": "1", "i": "1",
+    "Z": "2", "z": "2",
+    "S": "5", "s": "5",
+    "B": "8",
+    "g": "9",
+})
+
+
+_CONFUSABLE = set("OoDlI|iZzSsBg")
+
+
+def _fix_ocr_digits(text: str) -> str:
+    """Repair 0/O, 1/l, 5/S, 8/B confusions — but only inside tokens that are
+    clearly meant to be numbers, never inside real words. A token qualifies
+    when every non-digit letter in it is a known digit-lookalike."""
+    def fix_token(tok: str) -> str:
+        alnum = [c for c in tok if c.isalnum()]
+        digits = sum(c.isdigit() for c in alnum)
+        confusable = sum(c in _CONFUSABLE for c in alnum if not c.isdigit())
+        others = len(alnum) - digits - confusable
+        if digits >= 4 and others == 0 and digits + confusable >= MIN_DIGITS:
+            return tok.translate(_OCR_DIGIT_FIXES)
+        return tok
+
+    return "\n".join(
+        " ".join(fix_token(t) for t in line.split())
+        for line in text.splitlines()
+    )
+
+
+def _preprocess_for_ocr(img):
+    """Clean a photo up so Tesseract misreads less: fix rotation, grayscale,
+    upscale small images, boost contrast, sharpen."""
+    from PIL import Image, ImageFilter, ImageOps
+
+    img = ImageOps.exif_transpose(img)  # phone photos are often rotated via EXIF
+    if img.mode != "L":
+        img = img.convert("L")
+    if img.width < 1500:  # small photos -> characters too few pixels tall
+        scale = 1500 / img.width
+        img = img.resize((1500, max(1, round(img.height * scale))), Image.LANCZOS)
+    img = ImageOps.autocontrast(img, cutoff=1)
+    return img.filter(ImageFilter.SHARPEN)
+
+
+def _phone_shaped(word: str) -> bool:
+    """True when a token is mostly digits in phone-number quantity."""
+    nonspace = [c for c in word if not c.isspace()]
+    digits = sum(c.isdigit() for c in nonspace)
+    return (
+        MIN_DIGITS <= digits <= MAX_DIGITS
+        and digits >= 0.7 * max(1, len(nonspace))
+    )
+
+
+def _ocr_image(img, min_conf: float = 40.0) -> str:
+    """OCR an image, keeping only words Tesseract is reasonably confident about.
+    Low-confidence words are where the garbage 'phone numbers' come from.
+    Phone-shaped tokens get a lower bar (correct numbers sometimes score low);
+    true junk tends to score near zero."""
     import pytesseract
 
-    return pytesseract.image_to_string(img)
+    data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
+    lines: dict[tuple, list[str]] = {}
+    for i, word in enumerate(data["text"]):
+        word = word.strip()
+        if not word:
+            continue
+        try:
+            conf = float(data["conf"][i])
+        except (TypeError, ValueError):
+            conf = -1.0
+        if conf < min_conf and not (conf >= 20.0 and _phone_shaped(word)):
+            continue
+        key = (data["block_num"][i], data["par_num"][i], data["line_num"][i])
+        lines.setdefault(key, []).append(word)
+    text = "\n".join(" ".join(words) for _, words in sorted(lines.items()))
+    return _fix_ocr_digits(text)
 
 
 class Dedup:
@@ -183,7 +262,13 @@ def extract_from_image(path: str) -> list[dict]:
     from PIL import Image
 
     dd = Dedup()
-    dd.add(_contacts_from_text(_ocr_image(Image.open(path))))
+    with Image.open(path) as img:
+        contacts = _contacts_from_text(_ocr_image(_preprocess_for_ocr(img)))
+        if not contacts:
+            # Preprocessing can hurt unusual images (e.g. light text on dark
+            # background) — retry on the original before giving up.
+            contacts = _contacts_from_text(_ocr_image(img, min_conf=30.0))
+    dd.add(contacts)
     return dd.contacts
 
 
