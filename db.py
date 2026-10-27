@@ -46,8 +46,29 @@ def init_db() -> None:
         con.execute("ALTER TABLE users ADD COLUMN name TEXT DEFAULT ''")
     except sqlite3.OperationalError:
         pass
+    _dedupe_all_contacts(con)  # merge duplicates saved before canonical matching
     con.commit()
     con.close()
+
+
+def _dedupe_all_contacts(con: sqlite3.Connection) -> None:
+    """Remove contacts that are the same number in a different format,
+    keeping the oldest row and its name (or a duplicate's name if it has none)."""
+    rows = con.execute("SELECT id, user_id, name, phone FROM contacts ORDER BY id").fetchall()
+    kept: dict[tuple, dict] = {}
+    drop = []
+    for r in rows:
+        key = (r["user_id"], canonical_phone(r["phone"]))
+        if key not in kept:
+            kept[key] = dict(r)
+            continue
+        keep = kept[key]
+        if not keep["name"] and r["name"]:
+            con.execute("UPDATE contacts SET name = ? WHERE id = ?", (r["name"], keep["id"]))
+            keep["name"] = r["name"]
+        drop.append((r["id"],))
+    if drop:
+        con.executemany("DELETE FROM contacts WHERE id = ?", drop)
 
 
 # ---- users ----
@@ -100,21 +121,41 @@ def list_contacts(user_id: int) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def canonical_phone(phone: str) -> str:
+    """Same number in different formats -> same key, so dedupe catches
+    03001234567 vs +923001234567 vs 0092 300 1234567. Digits only, drop the
+    international/trunk prefix, compare on the last 10 digits."""
+    digits = "".join(ch for ch in phone if ch.isdigit())
+    if digits.startswith("00"):
+        digits = digits[2:]
+    digits = digits.lstrip("0") or digits
+    return digits[-10:]
+
+
 def save_contacts(user_id: int, contacts: list[dict], replace: bool) -> int:
-    """Insert contacts, skipping phones the user already has. Returns inserted count."""
+    """Insert contacts, skipping phones the user already has (in any format).
+    Returns inserted count."""
     con = get_db()
     if replace:
         con.execute("DELETE FROM contacts WHERE user_id = ?", (user_id,))
+        seen = set()
+    else:
+        rows = con.execute("SELECT phone FROM contacts WHERE user_id = ?", (user_id,)).fetchall()
+        seen = {canonical_phone(r["phone"]) for r in rows}
     inserted = 0
     for c in contacts:
+        key = canonical_phone(c["phone"])
+        if key in seen:
+            continue
         try:
             con.execute(
                 "INSERT INTO contacts (user_id, name, phone) VALUES (?, ?, ?)",
                 (user_id, (c.get("name") or "").strip(), c["phone"]),
             )
             inserted += 1
+            seen.add(key)
         except sqlite3.IntegrityError:
-            pass  # duplicate phone for this user
+            pass  # exact duplicate phone for this user
     con.commit()
     con.close()
     return inserted

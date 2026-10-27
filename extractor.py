@@ -195,14 +195,14 @@ def _phone_shaped(word: str) -> bool:
     )
 
 
-def _ocr_image(img, min_conf: float = 40.0) -> str:
+def _ocr_image(img, min_conf: float = 40.0, config: str = "") -> str:
     """OCR an image, keeping only words Tesseract is reasonably confident about.
     Low-confidence words are where the garbage 'phone numbers' come from.
     Phone-shaped tokens get a lower bar (correct numbers sometimes score low);
     true junk tends to score near zero."""
     import pytesseract
 
-    data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
+    data = pytesseract.image_to_data(img, config=config, output_type=pytesseract.Output.DICT)
     lines: dict[tuple, list[str]] = {}
     for i, word in enumerate(data["text"]):
         word = word.strip()
@@ -263,11 +263,22 @@ def extract_from_image(path: str) -> list[dict]:
 
     dd = Dedup()
     with Image.open(path) as img:
-        contacts = _contacts_from_text(_ocr_image(_preprocess_for_ocr(img)))
-        if not contacts:
-            # Preprocessing can hurt unusual images (e.g. light text on dark
-            # background) — retry on the original before giving up.
-            contacts = _contacts_from_text(_ocr_image(img, min_conf=30.0))
+        pre = _preprocess_for_ocr(img)
+        # Try progressively more permissive OCR modes and stop at the first hit:
+        # default page mode, the unprocessed original (preprocessing can hurt
+        # e.g. light-on-dark images), then sparse-text and single-block modes,
+        # which find short snippets like a lone number on a sign or card.
+        attempts = [
+            (pre, 40.0, ""),
+            (img, 30.0, ""),
+            (pre, 25.0, "--psm 11"),
+            (pre, 25.0, "--psm 6"),
+        ]
+        contacts = []
+        for target, conf, cfg in attempts:
+            contacts = _contacts_from_text(_ocr_image(target, min_conf=conf, config=cfg))
+            if contacts:
+                break
     dd.add(contacts)
     return dd.contacts
 
