@@ -33,6 +33,15 @@ DATE_RE = re.compile(
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp"}
 
+# A number right after one of these labels is an ID (transaction id, invoice,
+# reference, OTP...), not a phone number.
+ID_LABEL_RE = re.compile(
+    r"\b(tid|trx|trn|txn|transactions?|ref(erence)?s?|invoice|orders?|receipt|"
+    r"slip|voucher|cnic|iban|bill|tracking|serial|batch|code|otp|pin|id)"
+    r"\s*(no|num|number)?\s*[.:#\-]*\s*$",
+    re.I,
+)
+
 
 def tesseract_available() -> bool:
     if shutil.which("tesseract"):
@@ -79,6 +88,7 @@ def clean_name(text: str) -> str:
     text = re.sub(r"[\w.+-]+@[\w-]+\.[\w.-]+", "", text)
     text = re.sub(r"\b(ph|phone|tel|mobile|cell|contact|email|e-?mail|no|num|number)\b[.:#]?", "", text, flags=re.I)
     text = re.sub(r"^[\s\d.:\-–—|,;)]+", "", text)   # leading serial like "12. " or "3)"
+    text = re.sub(r"^(to|from|sender|receiver|recipient)\b[.:\-]?\s+", "", text, flags=re.I)
     text = re.sub(r"[\s.:\-–—|,;(]+$", "", text)
     text = re.sub(r"\s{2,}", " ", text)
     return text.strip()
@@ -102,6 +112,8 @@ def _contacts_from_line(line: str, prev_line: str) -> list[dict]:
         else:
             name = ""
     for m in matches:
+        if ID_LABEL_RE.search(line[: m.start()]):
+            continue  # labelled as an ID, not a phone number
         phone = normalize_phone(m.group(1))
         if phone:
             found.append({"name": name, "phone": phone})
@@ -125,7 +137,9 @@ def _contacts_from_row(cells: list[str]) -> list[dict]:
         if not c:
             continue
         m = PHONE_RE.search(c)
-        p = normalize_phone(m.group(1)) if m else None
+        p = None
+        if m and not ID_LABEL_RE.search(c[: m.start()]):
+            p = normalize_phone(m.group(1))
         if p is None:
             # A spreadsheet cell may hold a bare number with no separators
             p = normalize_phone(c) if re.fullmatch(r"\+?\d{7,15}(\.0)?", c.replace(" ", "")) else None
