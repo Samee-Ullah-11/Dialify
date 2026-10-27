@@ -1,0 +1,14 @@
+# user data — never commit
+dialify.db
+uploads/
+.secret_key
+contacts.json
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# local tooling
+.claude/

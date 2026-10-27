@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dialify</title>
+<meta name="theme-color" content="#0a66c2">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="icon" href="/static/icon-192.png">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f2f5f9; --card: #ffffff; --text: #141c27; --muted: #64748b;
+    --accent: #0b8a43; --brand: #0a66c2; --brand-soft: #e7f0fa;
+    --border: #e3e8ef; --danger: #d64545; --chip: #eef2f7;
+    --shadow: 0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06);
+    --shadow-lg: 0 8px 24px rgba(16,24,40,.12);
+    --r: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1219; --card: #171e28; --text: #e8edf3; --muted: #8e9cae;
+      --accent: #2ecc71; --brand: #4da3ff; --brand-soft: #1b2a3d;
+      --border: #263140; --danger: #e05d5d; --chip: #212b38;
+      --shadow: 0 1px 2px rgba(0,0,0,.4); --shadow-lg: 0 8px 28px rgba(0,0,0,.5);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 15px; line-height: 1.45; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px 16px 90px; }
+  @media (min-width: 640px) { .wrap { padding-bottom: 24px; } }
+
+  svg.ic { width: 1.1em; height: 1.1em; vertical-align: -0.18em; fill: none;
+    stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* header */
+  header { display: flex; align-items: center; gap: 10px; margin: 4px 0 18px; }
+  .logo { width: 38px; height: 38px; border-radius: 11px; background: var(--brand);
+    display: flex; align-items: center; justify-content: center; color: #fff;
+    box-shadow: var(--shadow); flex: none; }
+  .logo svg { width: 20px; height: 20px; }
+  h1 { font-size: 1.3rem; font-weight: 800; letter-spacing: -.02em; margin: 0; flex: 1; }
+  .userchip { font-size: .83rem; color: var(--muted); font-weight: 500;
+    max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* hero (guests) */
+  .hero { text-align: center; padding: 10px 8px 22px; }
+  .hero h2 { font-size: 1.7rem; font-weight: 800; letter-spacing: -.03em;
+    margin: 0 0 8px; line-height: 1.2; }
+  .hero h2 em { color: var(--brand); font-style: normal; }
+  .hero p { color: var(--muted); margin: 0 auto 18px; max-width: 420px; }
+  .steps { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .step { flex: 1; min-width: 130px; max-width: 170px; background: var(--card);
+    border: 1px solid var(--border); border-radius: var(--r); padding: 12px 10px;
+    box-shadow: var(--shadow); font-size: .82rem; color: var(--muted); }
+  .step b { display: block; color: var(--text); font-size: .9rem; margin-top: 6px; }
+  .stepnum { width: 26px; height: 26px; border-radius: 50%; background: var(--brand-soft);
+    color: var(--brand); font-weight: 700; font-size: .8rem; display: inline-flex;
+    align-items: center; justify-content: center; }
+
+  /* cards & buttons */
+  .card { background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow); }
+  .drop { border: 2px dashed var(--border); border-radius: var(--r); padding: 26px 16px;
+    text-align: center; color: var(--muted); cursor: pointer;
+    transition: border-color .15s, background .15s; display: block; }
+  .drop.hover, .drop:hover { border-color: var(--brand); background: var(--brand-soft); }
+  .drop input { display: none; }
+  .drop .big { font-weight: 600; color: var(--text); margin-top: 8px; }
+  .drop .up-ic { width: 34px; height: 34px; color: var(--brand); margin: 0 auto; }
+  .drop.busy { pointer-events: none; opacity: .8; }
+  .spinner { width: 28px; height: 28px; border: 3px solid var(--border);
+    border-top-color: var(--brand); border-radius: 50%; margin: 0 auto 8px;
+    animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn { border: 0; border-radius: 10px; padding: 9px 14px; font-size: .88rem;
+    font-weight: 600; font-family: inherit; cursor: pointer; background: var(--brand);
+    color: #fff; text-decoration: none; display: inline-flex; align-items: center;
+    gap: 7px; transition: filter .12s; }
+  .btn:hover { filter: brightness(1.08); }
+  .btn.ghost { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+  .btn.green { background: var(--accent); }
+  input[type=text], input[type=search], input[type=email], input[type=password], textarea, select {
+    padding: 10px 13px; border-radius: 10px; font-size: .93rem; font-family: inherit;
+    border: 1px solid var(--border); background: var(--card); color: var(--text); }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--brand); outline-offset: -1px; }
+
+  /* toolbar */
+  .toolbar { position: sticky; top: 0; z-index: 5; background: var(--bg);
+    padding: 8px 0 10px; margin-bottom: 4px; }
+  .actions-desktop { display: none; }
+  @media (min-width: 640px) { .actions-desktop { display: flex; margin-top: 8px; } }
+
+  /* contact list */
+  .count { font-size: .83rem; color: var(--muted); margin: 8px 2px; font-weight: 500; }
+  .contact { display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--r); margin-bottom: 8px; box-shadow: var(--shadow); }
+  .avatar { width: 42px; height: 42px; border-radius: 50%; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: .92rem; }
+  .info { flex: 1; min-width: 0; }
+  .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .name[contenteditable]:focus { outline: 1px solid var(--brand); border-radius: 4px; }
+  .phone { color: var(--muted); font-size: .83rem; font-variant-numeric: tabular-nums; }
+  .chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+  .chip { background: var(--chip); color: var(--muted); border-radius: 20px;
+    padding: 1px 9px; font-size: .71rem; font-weight: 600; cursor: pointer;
+    border: 1px solid transparent; }
+  .chip.tag { color: #fff; }
+  .chip.tag:hover::after { content: ' ✕'; }
+  .tagpicker { display: none; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  .tagpicker.open { display: flex; }
+  .tagpicker .chip { opacity: .85; }
+  .tagpicker .chip:hover { opacity: 1; }
+  .status-sel { font-size: .74rem; padding: 5px 6px; border-radius: 8px; max-width: 86px; }
+  .callbtn { width: 40px; height: 40px; border-radius: 50%; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--accent); color: #fff; text-decoration: none;
+    box-shadow: var(--shadow); transition: transform .1s; }
+  .callbtn:active { transform: scale(.92); }
+  .callbtn.wa { background: #25d366; }
+  .callbtn svg { width: 18px; height: 18px; }
+  .del { background: transparent; border: 0; color: var(--muted); cursor: pointer; padding: 4px; }
+  .del:hover { color: var(--danger); }
+  .del svg { width: 16px; height: 16px; }
+  @media (max-width: 480px) {
+    /* stack: avatar+info on top, actions row below */
+    .contact { flex-wrap: wrap; }
+    .info { flex: 1 1 calc(100% - 54px); }
+    .status-sel { order: 3; flex: 1; max-width: none; margin-left: 2px; }
+    .callbtn { order: 4; }
+    .del { order: 5; }
+  }
+
+  /* empty state */
+  .empty { text-align: center; padding: 36px 16px; color: var(--muted); }
+  .empty svg { width: 46px; height: 46px; stroke-width: 1.4; margin-bottom: 8px; color: var(--border); }
+
+  /* mobile bottom bar */
+  .bottombar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 8;
+    display: flex; justify-content: space-around; background: var(--card);
+    border-top: 1px solid var(--border); padding: 8px 4px calc(8px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 16px rgba(16,24,40,.08); }
+  .bottombar button, .bottombar a { background: none; border: 0; color: var(--muted);
+    font-family: inherit; font-size: .64rem; font-weight: 600; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    text-decoration: none; padding: 2px 8px; }
+  .bottombar svg { width: 21px; height: 21px; }
+  @media (min-width: 640px) { .bottombar { display: none; } }
+
+  /* modals */
+  .modal-bg { position: fixed; inset: 0; background: rgba(10,15,22,.55);
+    display: none; align-items: flex-end; justify-content: center; z-index: 10;
+    backdrop-filter: blur(2px); }
+  @media (min-width: 640px) { .modal-bg { align-items: center; padding: 16px; } }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--card); border-radius: 18px 18px 0 0; padding: 20px;
+    width: 100%; max-width: 520px; max-height: 88vh; overflow: auto;
+    box-shadow: var(--shadow-lg); }
+  @media (min-width: 640px) { .modal { border-radius: 18px; } }
+  .modal h2 { margin: 0 0 12px; font-size: 1.08rem; font-weight: 700; }
+  .rev-head { display: flex; align-items: center; gap: 8px; padding: 6px 0;
+    border-bottom: 2px solid var(--border); font-size: .76rem; font-weight: 700;
+    color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .rev-head .n { flex: 1; }
+  .rev-row { display: flex; gap: 8px; align-items: center; padding: 7px 0;
+    border-bottom: 1px solid var(--border); }
+  .rev-row input[type=text] { flex: 1; padding: 7px 10px; font-size: .88rem; }
+  .rev-row .ph { color: var(--muted); font-size: .82rem; white-space: nowrap;
+    font-variant-numeric: tabular-nums; }
+  .rev-foot { position: sticky; bottom: -20px; background: var(--card);
+    padding: 14px 0 4px; margin-top: 6px; }
+  .muted { color: var(--muted); font-size: .86rem; }
+  .checkrow { display: flex; align-items: center; gap: 6px; font-size: .85rem; color: var(--muted); }
+
+  #toast { position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 12px;
+    font-size: .88rem; font-weight: 500; display: none; z-index: 20;
+    box-shadow: var(--shadow-lg); max-width: 90vw; }
+  @media (min-width: 640px) { #toast { bottom: 24px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+    <h1>Dialify</h1>
+    <span id="who" class="userchip"></span>
+    <button class="btn ghost" id="authBtn">Sign in</button>
+  </header>
+
+  <div class="hero" id="hero" style="display:none">
+    <h2>Stop typing numbers from PDFs.<br><em>Upload, tap, call.</em></h2>
+    <p>Dialify pulls every name and phone number out of your PDFs, scans,
+       screenshots and spreadsheets — and turns them into a tap-to-call list.</p>
+    <div class="steps">
+      <div class="step"><span class="stepnum">1</span><b>Upload</b> any PDF, image, Excel or CSV</div>
+      <div class="step"><span class="stepnum">2</span><b>Review</b> the contacts it found</div>
+      <div class="step"><span class="stepnum">3</span><b>Call</b> or WhatsApp with one tap</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <label class="drop" id="drop">
+      <input type="file" id="file" accept=".pdf,.png,.jpg,.jpeg,.bmp,.tiff,.webp,.csv,.xlsx,.xlsm">
+      <div id="dropIdle">
+        <svg class="up-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div class="big">Drop a PDF, image, Excel or CSV</div>
+        <div class="muted" id="ocrNote">or tap to choose — names &amp; numbers are extracted automatically</div>
+      </div>
+      <div id="dropBusy" style="display:none">
+        <div class="spinner"></div>
+        <div class="big">Extracting contacts…</div>
+        <div class="muted">Scanned files take a few seconds (OCR)</div>
+      </div>
+    </label>
+    <div id="status" class="muted" style="margin-top:8px"></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="row">
+      <input id="search" type="search" placeholder="Search name, number or tag…" style="flex:1">
+      <select id="statusFilter" title="Filter by status">
+        <option value="">All statuses</option>
+        <option value="new">New</option><option value="called">Called</option>
+        <option value="no answer">No answer</option><option value="interested">Interested</option>
+        <option value="not interested">Not interested</option>
+      </select>
+    </div>
+    <div class="row actions-desktop">
+      <a class="btn ghost" id="vcfBtn" href="/export/vcf"><svg class="ic" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> vCard</a>
+      <a class="btn ghost" id="csvBtn" href="/export/csv"><svg class="ic" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> CSV</a>
+      <button class="btn ghost" id="shareBtn"><svg class="ic" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share</button>
+      <button class="btn ghost" id="waBulkBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg> Bulk WhatsApp</button>
+      <button class="btn ghost" id="ccBtn" title="Default country code"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> +<span id="ccShow">?</span></button>
+    </div>
+  </div>
+
+  <div class="count" id="count"></div>
+  <div id="list"></div>
+  <div class="empty" id="empty" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <div id="emptyMsg"></div>
+  </div>
+</div>
+
+<!-- mobile bottom bar -->
+<nav class="bottombar" id="bottombar">
+  <a id="vcfBtnM" href="/export/vcf"><svg class="ic" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>vCard</a>
+  <a id="csvBtnM" href="/export/csv"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>CSV</a>
+  <button id="shareBtnM"><svg class="ic" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share</button>
+  <button id="waBulkBtnM"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg>WhatsApp</button>
+  <button id="ccBtnM"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Code</button>
+</nav>
+
+<!-- auth modal -->
+<div class="modal-bg" id="authModal">
+  <div class="modal">
+    <h2 id="authTitle">Sign in</h2>
+    <div class="row" style="flex-direction:column; align-items:stretch">
+      <input type="text" id="authName" placeholder="Your name" style="display:none">
+      <input type="email" id="authEmail" placeholder="Email">
+      <input type="password" id="authPass" placeholder="Password (min 6 chars)">
+      <div class="muted" id="authErr" style="color:var(--danger)"></div>
+      <button class="btn" id="authGo">Sign in</button>
+      <button class="btn ghost" id="authSwap">Need an account? Register</button>
+      <button class="btn ghost" id="authClose">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- review modal -->
+<div class="modal-bg" id="revModal">
+  <div class="modal">
+    <h2>Review extracted contacts</h2>
+    <div class="muted" id="revInfo" style="margin-bottom:8px"></div>
+    <div class="rev-head">
+      <input type="checkbox" id="revAll" checked title="Select all">
+      <span class="n">Name (tap to edit)</span><span>Phone</span>
+    </div>
+    <div id="revList"></div>
+    <div class="rev-foot row">
+      <button class="btn green" id="revSaveAdd">Add <span id="revCount"></span></button>
+      <button class="btn" id="revSaveReplace">Replace list</button>
+      <button class="btn ghost" id="revCancel">Discard</button>
+    </div>
+  </div>
+</div>
+
+<!-- bulk whatsapp modal -->
+<div class="modal-bg" id="waModal">
+  <div class="modal">
+    <h2>Bulk WhatsApp</h2>
+    <div class="muted" style="margin-bottom:8px">Write one message, then send it to each selected
+      contact — a WhatsApp chat opens per contact with the message pre-filled; you press Send.
+      (WhatsApp doesn't allow fully automatic sending.)</div>
+    <textarea id="waMsg" rows="3" style="width:100%" placeholder="Hello! …"></textarea>
+    <div class="checkrow" style="margin:8px 0 4px">
+      <input type="checkbox" id="waAll" checked> <label for="waAll">Select all (filtered)</label>
+    </div>
+    <div id="waList" style="max-height:200px; overflow:auto"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn green" id="waStart">Start sending</button>
+      <span class="muted" id="waProgress"></span>
+      <button class="btn ghost" id="waClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let contacts = [], me = null, pending = [];
+const $ = id => document.getElementById(id);
+
+// Fixed tag set, each with its own color (works in light & dark themes)
+const TAGS = {
+  'Client':   '#0a66c2', 'Owner':  '#8e44ad', 'Supplier': '#e67e22',
+  'Lead':     '#16a085', 'Family': '#c2185b', 'Friend':   '#2d8f46',
+  'Staff':    '#5d6d7e', 'Other':  '#7f8c8d',
+};
+function tagColor(t) { return TAGS[t.trim()] || TAGS['Other']; }
+function tagList(c) { return (c.tags || '').split(',').map(t => t.trim()).filter(Boolean); }
+
+const AVATAR_COLORS = ['#0a66c2','#8e44ad','#e67e22','#16a085','#c2185b','#2d8f46','#d35400','#5b6ee1'];
+function avatarColor(name) {
+  let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+function esc(s) { return String(s).replace(/[&<>"']/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function initials(name) {
+  const p = name.trim().split(/\s+/).filter(Boolean);
+  return p.length ? (p[0][0] + (p[1] ? p[1][0] : '')).toUpperCase() : '#';
+}
+const ICONS = {
+  phone: '<svg class="ic" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+  wa: '<svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg>',
+  x: '<svg class="ic" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+};
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 2800);
+}
+async function api(url, body) {
+  const res = await fetch(url, body === undefined ? {} :
+    {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && data.auth) { openAuth(); throw new Error(data.error); }
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+// ---------- auth ----------
+let registering = false;
+function openAuth() { $('authModal').classList.add('open'); $('authErr').textContent = ''; }
+function setAuthMode() {
+  $('authTitle').textContent = registering ? 'Create account' : 'Sign in';
+  $('authGo').textContent = registering ? 'Register' : 'Sign in';
+  $('authSwap').textContent = registering ? 'Have an account? Sign in' : 'Need an account? Register';
+  $('authName').style.display = registering ? '' : 'none';
+}
+$('authSwap').onclick = () => { registering = !registering; setAuthMode(); };
+$('authClose').onclick = () => $('authModal').classList.remove('open');
+$('authGo').onclick = async () => {
+  try {
+    await api(registering ? '/api/register' : '/api/login',
+      {name: $('authName').value, email: $('authEmail').value, password: $('authPass').value});
+    $('authModal').classList.remove('open');
+    await refreshMe(); await loadContacts();
+    toast(registering ? 'Account created — welcome!' : 'Signed in.');
+  } catch (e) { $('authErr').textContent = e.message; }
+};
+$('authBtn').onclick = async () => {
+  if (me) { await api('/api/logout', {}); me = null; contacts = []; updateHeader(); render(); }
+  else openAuth();
+};
+function updateHeader() {
+  $('who').textContent = me ? (me.name || me.email) : '';
+  $('who').title = me ? me.email : '';
+  $('authBtn').textContent = me ? 'Sign out' : 'Sign in';
+  $('ccShow').textContent = (me && me.default_cc) ? me.default_cc : '?';
+  $('hero').style.display = me ? 'none' : '';
+  $('bottombar').style.display = me ? '' : 'none';
+}
+async function refreshMe() {
+  const data = await api('/api/me');
+  me = data.user;
+  if (!data.ocr) $('ocrNote').textContent =
+    'PDF/Excel/CSV ready — image & scanned-PDF OCR engine still installing…';
+  updateHeader();
+}
+
+// ---------- upload & review ----------
+function setBusy(b) {
+  $('drop').classList.toggle('busy', b);
+  $('dropIdle').style.display = b ? 'none' : '';
+  $('dropBusy').style.display = b ? '' : 'none';
+}
+async function upload(file) {
+  $('status').textContent = '';
+  setBusy(true);
+  const fd = new FormData(); fd.append('file', file);
+  try {
+    const res = await fetch('/api/extract', {method:'POST', body: fd});
+    const data = await res.json();
+    setBusy(false);
+    if (!res.ok) { $('status').textContent = '⚠ ' + (data.error || 'Failed'); return; }
+    pending = data.contacts;
+    if (!pending.length) { toast('No phone numbers found in that file.'); return; }
+    openReview();
+  } catch (e) { setBusy(false); $('status').textContent = '⚠ ' + e.message; }
+}
+function updateRevCount() {
+  const n = document.querySelectorAll('.rev-ck:checked').length;
+  $('revCount').textContent = `${n} contact${n === 1 ? '' : 's'}`;
+}
+function openReview() {
+  $('revInfo').textContent = `Found ${pending.length} contact(s). Untick any you don't want and fix names before saving.`;
+  $('revList').innerHTML = pending.map((c, i) => `
+    <div class="rev-row">
+      <input type="checkbox" class="rev-ck" data-i="${i}" checked>
+      <input type="text" class="rev-name" data-i="${i}" value="${esc(c.name)}" placeholder="(no name)">
+      <span class="ph">${esc(c.phone)}</span>
+    </div>`).join('');
+  $('revAll').checked = true;
+  document.querySelectorAll('.rev-ck').forEach(ck => ck.onchange = updateRevCount);
+  updateRevCount();
+  $('revModal').classList.add('open');
+}
+$('revAll').onchange = () => {
+  document.querySelectorAll('.rev-ck').forEach(ck => ck.checked = $('revAll').checked);
+  updateRevCount();
+};
+$('revCancel').onclick = () => $('revModal').classList.remove('open');
+async function saveReview(mode) {
+  const chosen = [];
+  document.querySelectorAll('.rev-ck').forEach(ck => {
+    if (ck.checked) {
+      const i = +ck.dataset.i;
+      const nameEl = document.querySelector(`.rev-name[data-i="${i}"]`);
+      chosen.push({name: nameEl.value.trim(), phone: pending[i].phone});
+    }
+  });
+  if (!chosen.length) { toast('Nothing selected.'); return; }
+  try {
+    const data = await api('/api/contacts/save', {contacts: chosen, mode});
+    $('revModal').classList.remove('open');
+    toast(`Saved ${data.inserted} new contact(s) — list has ${data.total}.`);
+    await loadContacts();
+  } catch (e) { toast(e.message); }
+}
+$('revSaveAdd').onclick = () => saveReview('append');
+$('revSaveReplace').onclick = () => saveReview('replace');
+
+const drop = $('drop'), fileInput = $('file');
+fileInput.onchange = () => fileInput.files[0] && upload(fileInput.files[0]);
+['dragover','dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('hover'); }));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('hover'); }));
+drop.addEventListener('drop', e => e.dataTransfer.files[0] && upload(e.dataTransfer.files[0]));
+
+// ---------- list ----------
+function filtered() {
+  const q = $('search').value.toLowerCase().trim();
+  const st = $('statusFilter').value;
+  return contacts.filter(c =>
+    (!q || c.name.toLowerCase().includes(q) || c.phone.includes(q) || (c.tags||'').toLowerCase().includes(q))
+    && (!st || c.status === st));
+}
+function render() {
+  const shown = filtered();
+  const emptyEl = $('empty');
+  if (!me) {
+    $('count').textContent = '';
+    emptyEl.style.display = '';
+    $('emptyMsg').innerHTML = 'Try it now — drop a file above.<br>Sign in to keep your list, export and share.';
+  } else if (!contacts.length) {
+    $('count').textContent = '';
+    emptyEl.style.display = '';
+    $('emptyMsg').textContent = 'No contacts yet — upload your first file above.';
+  } else {
+    emptyEl.style.display = 'none';
+    $('count').textContent = `${shown.length} of ${contacts.length} contacts`;
+  }
+  $('list').innerHTML = shown.map(c => `
+    <div class="contact" data-id="${c.id}">
+      <div class="avatar" style="background:${avatarColor(c.name || c.phone)}">${esc(initials(c.name))}</div>
+      <div class="info">
+        <div class="name" contenteditable spellcheck="false">${esc(c.name || '(no name)')}</div>
+        <div class="phone">${esc(c.phone)}</div>
+        <div class="chips">${tagList(c).map(t =>
+          `<span class="chip tag" data-tag="${esc(t)}" style="background:${tagColor(t)}" title="Remove tag">${esc(t)}</span>`).join('')}
+          <span class="chip" data-addtag="1">+ tag</span></div>
+        <div class="tagpicker">${Object.entries(TAGS).map(([t, col]) =>
+          `<span class="chip tag" data-pick="${esc(t)}" style="background:${col}">${esc(t)}</span>`).join('')}</div>
+      </div>
+      <select class="status-sel">
+        ${['new','called','no answer','interested','not interested'].map(s =>
+          `<option ${c.status===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+      <a class="callbtn" href="tel:${esc(c.phone)}" title="Call">${ICONS.phone}</a>
+      <a class="callbtn wa" href="https://wa.me/${c.phone.replace(/\D/g,'')}" target="_blank" rel="noopener" title="WhatsApp">${ICONS.wa}</a>
+      <button class="del" title="Remove">${ICONS.x}</button>
+    </div>`).join('');
+
+  document.querySelectorAll('.contact').forEach(el => {
+    const id = +el.dataset.id;
+    const c = contacts.find(x => x.id === id);
+    el.querySelector('.del').onclick = async () => {
+      await api(`/api/contacts/${id}/update`, {delete: true});
+      contacts = contacts.filter(x => x.id !== id); render();
+    };
+    const nameEl = el.querySelector('.name');
+    nameEl.onblur = async () => {
+      c.name = nameEl.textContent.trim();
+      await api(`/api/contacts/${id}/update`, {name: c.name});
+    };
+    nameEl.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); nameEl.blur(); } };
+    el.querySelector('.status-sel').onchange = async e => {
+      c.status = e.target.value;
+      await api(`/api/contacts/${id}/update`, {status: c.status});
+    };
+    const picker = el.querySelector('.tagpicker');
+    el.querySelector('[data-addtag]').onclick = () => picker.classList.toggle('open');
+    picker.querySelectorAll('[data-pick]').forEach(ch => ch.onclick = async () => {
+      const t = ch.dataset.pick;
+      const tags = tagList(c);
+      if (!tags.includes(t)) tags.push(t);
+      c.tags = tags.join(',');
+      await api(`/api/contacts/${id}/update`, {tags: c.tags}); render();
+    });
+    el.querySelectorAll('.chips [data-tag]').forEach(ch => ch.onclick = async () => {
+      c.tags = tagList(c).filter(t => t !== ch.dataset.tag).join(',');
+      await api(`/api/contacts/${id}/update`, {tags: c.tags}); render();
+    });
+  });
+}
+async function loadContacts() {
+  if (!me) { contacts = []; render(); return; }
+  try { contacts = await api('/api/contacts'); } catch { contacts = []; }
+  render();
+}
+$('search').oninput = render;
+$('statusFilter').onchange = render;
+
+// ---------- share, country code, bulk WA ----------
+async function doShare() {
+  if (!me) return openAuth();
+  const data = await api('/api/share', {});
+  await navigator.clipboard.writeText(data.url).catch(() => {});
+  toast('Share link copied: ' + data.url);
+}
+async function doCc() {
+  if (!me) return openAuth();
+  const cc = prompt('Default country code (digits only, e.g. 92 for Pakistan).\nLocal numbers like 0300… will be saved as +92 300…:', me.default_cc || '');
+  if (cc === null) return;
+  await api('/api/settings', {default_cc: cc});
+  me.default_cc = cc.replace(/\D/g, ''); updateHeader();
+  toast('Country code saved — applies to newly saved contacts.');
+}
+function doWaBulk() {
+  if (!me) return openAuth();
+  const shown = filtered();
+  if (!shown.length) return toast('No contacts to message.');
+  $('waList').innerHTML = shown.map(c => `
+    <div class="checkrow"><input type="checkbox" class="wa-ck" data-id="${c.id}" checked>
+    ${esc(c.name || c.phone)} <span class="muted">${esc(c.phone)}</span></div>`).join('');
+  $('waProgress').textContent = '';
+  $('waModal').classList.add('open');
+}
+$('shareBtn').onclick = doShare;   $('shareBtnM').onclick = doShare;
+$('ccBtn').onclick = doCc;         $('ccBtnM').onclick = doCc;
+$('waBulkBtn').onclick = doWaBulk; $('waBulkBtnM').onclick = doWaBulk;
+$('waAll').onchange = () =>
+  document.querySelectorAll('.wa-ck').forEach(ck => ck.checked = $('waAll').checked);
+$('waClose').onclick = () => $('waModal').classList.remove('open');
+let waQueue = [], waIdx = 0;
+$('waStart').onclick = () => {
+  if ($('waStart').textContent.startsWith('Next')) return nextWa();
+  const msg = encodeURIComponent($('waMsg').value);
+  waQueue = [...document.querySelectorAll('.wa-ck')].filter(ck => ck.checked)
+    .map(ck => contacts.find(c => c.id === +ck.dataset.id))
+    .filter(Boolean).map(c => `https://wa.me/${c.phone.replace(/\D/g,'')}${msg ? '?text='+msg : ''}`);
+  waIdx = 0;
+  if (!waQueue.length) return toast('Nothing selected.');
+  $('waStart').textContent = 'Next contact →';
+  nextWa();
+};
+function nextWa() {
+  if (waIdx >= waQueue.length) {
+    $('waProgress').textContent = 'Done — all opened.';
+    $('waStart').textContent = 'Start sending'; return;
+  }
+  window.open(waQueue[waIdx], '_blank');
+  waIdx++;
+  $('waProgress').textContent = `${waIdx} of ${waQueue.length} opened`;
+}
+
+// guard exports for guests
+['vcfBtn','csvBtn','vcfBtnM','csvBtnM'].forEach(id => $(id).addEventListener('click', e => {
+  if (!me) { e.preventDefault(); openAuth(); }
+}));
+
+// PWA service worker
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+
+(async () => { await refreshMe(); await loadContacts(); })();
+</script>
+</body>
+</html>
